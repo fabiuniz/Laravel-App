@@ -1,0 +1,34 @@
+
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/storage/app/public/uploads # Exemplo, ajuste conforme seus diretórios de upload
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/framework/testing/*
+/storage/logs/*.log
+/vendor
+
+.env
+.env.backup
+.env.*.local
+.phpunit.result.cache
+.vscode/
+.idea/
+.DS_Store
+*.log
+npm-debug.log
+yarn-error.log
+.composer
+.history
+
+# Docker
+docker-compose.override.yml # Se você usar um arquivo override local
+/dbdata # Volume do MySQL local
+/.docker/ # Se você tiver um diretório .docker com dados sensíveis ou de cache
+
+# GCP Service Account Key (MUITO IMPORTANTE!)
+sa-key.json
+
