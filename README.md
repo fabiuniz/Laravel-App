@@ -1,7 +1,7 @@
 <!-- 
   Tags: DevOps
-  Label: ⚙️ GCP/Heroku Docker - GitHub Actions.
-  Description: Aplicação Flask Dockerizada com CI/CD Automatizado
+  Label: ⚙️ Laravel - GitHub Actions - GCP.
+  Description: Projeto Laravel Dockerizado com CI/CD - GitHub Actions - Google Cloud Run.
   path_hook: hookfigma.hook18
 -->
 
