@@ -91,7 +91,6 @@ jobs:
             ./vendor/bin/phpcs --standard=PSR12 app/
           fi
 
-  ---
   # 2️⃣ JOB: Build e Deploy para Produção
   deploy-production:
     name: 🚀 Deploy Produção
@@ -170,7 +169,7 @@ jobs:
             --set-env-vars="DB_CONNECTION=mysql" \
             --set-env-vars="DB_PORT=3306" \
             --set-env-vars="DB_DATABASE=${{ secrets.DB_DATABASE }}" \
-            --set-env-vars="DB_USERNAME=${{ secrets.DB_USERNAME }}"
+            --set-env-vars="DB_USERNAME=${{ secrets.DB_USERNAME }}" \
             --set-env-vars="DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
             --set-env-vars="APP_KEY=${{ secrets.LARAVEL_APP_KEY }}" \
             --command="php" \
@@ -257,7 +256,6 @@ jobs:
             fi
           done || echo "ℹ️ Nenhuma imagem antiga para remover"
 
-  ---
   # 3️⃣ JOB: Build e Deploy para Staging
   deploy-staging:
     name: 🧪 Deploy Staging
@@ -426,7 +424,6 @@ jobs:
             fi
           done || echo "ℹ️ Nenhuma imagem antiga para remover"
 
-  ---
   # 4️⃣ JOB: Notificação de Deploy
   notify:
     name: 📢 Notificar Resultado
