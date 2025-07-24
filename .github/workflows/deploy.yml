@@ -8,10 +8,10 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GAR_LOCATION: us-central1 # Certifique-se de que esta é a região do seu Artifact Registry
+  GAR_LOCATION: us-central1
   REPOSITORY: laravel-app
   SERVICE: laravel-docker-app
-  REGION: us-central1 # Certifique-se de que esta é a região do seu Cloud Run e Cloud SQL
+  REGION: us-central1
 
 jobs:
   test:
@@ -51,7 +51,7 @@ jobs:
 
       - name: Create Database
         run: |
-          mysql --host 127.0.0.1 --port 3306 -uroot -proot_password -e 'CREATE DATABASE IF NOT EXISTS laravel_test;'
+          mysql --host=127.0.0.1 --port=3306 -uroot -proot_password -e 'CREATE DATABASE IF NOT EXISTS laravel_test;'
 
       - name: Execute tests (Unit and Feature tests) via PHPUnit
         env:
@@ -69,7 +69,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
-      id-token: write # Necessário para autenticação no GCP
+      id-token: write
 
     steps:
       - name: Checkout
@@ -77,17 +77,17 @@ jobs:
 
       - name: Google Auth
         id: auth
-        uses: 'google-github-actions/auth@v2'
+        uses: google-github-actions/auth@v2
         with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev
 
       - name: Build and Push Container
-        run: |-
-          docker build -t "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}" ./
-          docker push "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
+        run: |
+          docker build -t ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }} .
+          docker push ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}
 
       - name: Deploy to Cloud Run
         id: deploy
@@ -100,40 +100,38 @@ jobs:
             APP_ENV=production
             APP_DEBUG=false
             APP_KEY=${{ secrets.LARAVEL_APP_KEY }}
-            APP_URL=${{ steps.deploy.outputs.url }} # Pega a URL gerada pelo Cloud Run
+            APP_URL=${{ steps.deploy.outputs.url }}
             DB_CONNECTION=mysql
-            DB_HOST=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_PROD # <--- AJUSTAR AQUI
+            DB_HOST=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_PROD
             DB_PORT=3306
             DB_DATABASE=${{ secrets.DB_DATABASE }}
             DB_USERNAME=${{ secrets.DB_USERNAME }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          cloud_sql_instances: ${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_PROD # <--- AJUSTAR AQUI
-          # Adicione o tempo limite, se necessário (padrão é 5min)
-          timeout: 900s # Aumentado para 15 minutos para deploy grande ou lento
+          cloud_sql_instances: ${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_PROD
+          timeout: 900s
 
       - name: Run Laravel Migrations
-        # Executa as migrações usando um Cloud Run Job temporário
         run: |
           MIGRATION_JOB_NAME="${{ env.SERVICE }}-migrate-${{ github.sha }}"
           echo "Criando e executando Cloud Run Job para migrações: ${MIGRATION_JOB_NAME}"
           gcloud run jobs create "${MIGRATION_JOB_NAME}" \
-            --image="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}" \
-            --command="/usr/local/bin/php" --args="artisan","migrate","--force" \
-            --region="${{ env.REGION }}" \
-            --project="${{ env.PROJECT_ID }}" \
+            --image=${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }} \
+            --command=/usr/local/bin/php \
+            --args=artisan,migrate,--force \
+            --region=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }} \
             --no-cpu-throttling \
-            --service-account="${{ secrets.GCP_SA_EMAIL }}" \ # Use o e-mail completo da sua SA
+            --service-account=${{ secrets.GCP_SA_EMAIL }} \
             --set-env-vars="DB_CONNECTION=mysql,DB_HOST=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_PROD,DB_PORT=3306,DB_DATABASE=${{ secrets.DB_DATABASE }},DB_USERNAME=${{ secrets.DB_USERNAME }},DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
-            --cloud-sql-instances="${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_PROD" \
-            --wait # Espera o job terminar
+            --cloud-sql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_PROD \
+            --wait
           echo "Migrações concluídas para o serviço ${{ env.SERVICE }}"
-          # Opcional: Para evitar jobs acumulados, você pode apagar o job após a execução
-          # gcloud run jobs delete "${MIGRATION_JOB_NAME}" --region="${{ env.REGION }}" --project="${{ env.PROJECT_ID }}" --quiet
+          # gcloud run jobs delete "${MIGRATION_JOB_NAME}" --region=${{ env.REGION }} --project=${{ env.PROJECT_ID }} --quiet
 
       - name: Show Production URL
         run: echo "🚀 Aplicação de Produção disponível em: ${{ steps.deploy.outputs.url }}"
 
-  staging-deploy: # Esta linha e as seguintes precisam estar corretamente indentadas
+  staging-deploy:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop'
@@ -144,17 +142,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Google Auth
         id: auth
-        uses: 'google-github-actions/auth@v2'
+        uses: google-github-actions/auth@v2
         with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev
+
       - name: Build and Push Container (Staging)
-        run: |-
-          docker build -t "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}-staging:${{ github.sha }}" ./
-          docker push "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}-staging:${{ github.sha }}"
+        run: |
+          docker build -t ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}-staging:${{ github.sha }} .
+          docker push ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}-staging:${{ github.sha }}
+
       - name: Deploy to Cloud Run (Staging)
         id: deploy_staging
         uses: google-github-actions/deploy-cloudrun@v2
@@ -175,20 +177,23 @@ jobs:
             DB_PASSWORD=${{ secrets.DB_PASSWORD_STAGING }}
           cloud_sql_instances: ${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_STAGING
           timeout: 900s
+
       - name: Run Laravel Migrations (Staging)
         run: |
           MIGRATION_JOB_NAME="${{ env.SERVICE }}-staging-migrate-$(date +%s)"
           echo "Criando e executando Cloud Run Job para migrações de staging: ${MIGRATION_JOB_NAME}"
           gcloud run jobs create "${MIGRATION_JOB_NAME}" \
-            --image="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}-staging:${{ github.sha }}" \
-            --command="/usr/local/bin/php" --args="artisan","migrate","--force" \
-            --region="${{ env.REGION }}" \
-            --project="${{ env.PROJECT_ID }}" \
+            --image=${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}-staging:${{ github.sha }} \
+            --command=/usr/local/bin/php \
+            --args=artisan,migrate,--force \
+            --region=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }} \
             --no-cpu-throttling \
-            --service-account="${{ secrets.GCP_SA_EMAIL }}" \
+            --service-account=${{ secrets.GCP_SA_EMAIL }} \
             --set-env-vars="DB_CONNECTION=mysql,DB_HOST=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_STAGING,DB_PORT=3306,DB_DATABASE=${{ secrets.DB_DATABASE_STAGING }},DB_USERNAME=${{ secrets.DB_USERNAME_STAGING }},DB_PASSWORD=${{ secrets.DB_PASSWORD_STAGING }}" \
-            --cloud-sql-instances="${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_STAGING" \
+            --cloud-sql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_STAGING \
             --wait
           echo "Migrações concluídas para o serviço ${{ env.SERVICE }}-staging"
+
       - name: Show Staging URL
         run: echo "🧪 Aplicação de Staging disponível em: ${{ steps.deploy_staging.outputs.url }}"
