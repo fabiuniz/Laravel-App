@@ -54,29 +54,64 @@ A aplicação exibe:
 
 ```
 laravel-docker-app/
-├── 📂 app/
-│   └── Http/Controllers/
-│       └── HelloController.php         # 🎯 Controller principal
-├── 📂 docker/
-│   ├── nginx/
-│   │   └── default.conf               # ⚙️ Configuração Nginx
-│   ├── php/
-│   │   └── local.ini                  # 🐘 Configurações PHP
-│   ├── mysql/
-│   │   └── my.cnf                     # 🗄️ Configurações MySQL
-│   └── supervisor/
-│       └── supervisord.conf           # 📊 Supervisor config
-├── 📂 resources/views/
-│   └── hello.blade.php                # 🎨 Template principal
-├── 📂 .github/workflows/
-│   └── deploy.yml                     # ⚙️ Pipeline CI/CD
-├── 🐳 Dockerfile                      # 📦 Imagem Docker
-├── 🐳 docker-compose.yml             # 🛠️ Orquestração local
-├── 🚀 start.sh                       # 🎬 Script de inicialização
-├── 🔧 dev.sh                         # 🛠️ Ferramentas de desenvolvimento
-├── 📝 .env                           # 🔐 Variáveis de ambiente
-├── 📝 .gitignore                     # 🚫 Arquivos ignorados
-└── 📖 README.md                      # 📚 Documentação
+├── 📂 app/                            # 💻 Código fonte da aplicação
+│ ├── Console/
+│ ├── Exceptions/
+│ ├── Http/
+│ │ ├── Controllers/
+│ │ │ ├── Controller.php
+│ │   ├── HelloController.php     # 🎯 Exemplo de Controller
+│ │ ├── Kernel.php
+│ │ └── Middleware/
+│ ├── Models/
+│ │ └── User.php                    # 🗄️ Exemplo de Model
+│ └── Providers/
+├── 📂 config/                         # ⚙️ Arquivos de configuração do Laravel
+├── 📂 database/                       # 🗄️ Migrações, factories e seeders
+│ ├── factories/
+│ ├── migrations/
+│ └── seeders/
+├── 📂 docker/                         # 🐳 Configurações de containers Docker
+│ ├── app/
+│ ├── mysql/
+│ │ └── my.cnf                      # 🗄️ Configurações MySQL
+│ ├── nginx/
+│ │ └── default.conf                # ⚙️ Configuração Nginx
+│ ├── php/
+│ │ └── local.ini                   # 🐘 Configurações PHP
+│ └── supervisor/
+│   └── supervisord.conf            # 📊 Supervisor config
+├── 📂 public/                         # 🌐 Assets públicos e entry point
+│ └── index.php
+├── 📂 resources/                      # 🎨 Views e assets frontend
+│ ├── css/
+│ │ └── app.css
+│ ├── js/
+│ │ └── app.js
+│ ├── lang/
+│ └── views/
+│   ├── hello.blade.php             # 🎨 Exemplo de Blade Template
+│   └── welcome.blade.php
+├── 📂 routes/                         # 🛣️ Definição de rotas
+│ ├── api.php
+│ ├── channels.php
+│ ├── console.php
+│ └── web.php
+├── 📂 .github/workflows/              # 🚀 Workflows de CI/CD
+│ └── deploy.yml                      # ⚙️ Pipeline de Deploy
+├── 🐳 Dockerfile                       # 📦 Definição da imagem Docker
+├── 🐳 docker-compose.yml               # 🛠️ Orquestração de serviços Docker (local)
+├── 📝 .env.example                    # 🔐 Exemplo de variáveis de ambiente
+├── 📜 artisan                         # 💻 Laravel Artisan CLI
+├── 📝 composer.json                   # 📦 Dependências PHP
+├── 📝 package.json                    # 📦 Dependências JavaScript
+├── 🚀 start.sh                        # 🎬 Script de inicialização local
+├── 🔧 dev.sh                          # 🛠️ Script para desenvolvimento
+├── 🧪 phpunit.xml                     # 🧪 Configuração PHPUnit
+├── 📂 tests/                          # ✅ Testes da aplicação
+│ ├── Feature/
+│ └── Unit/
+└── 🎨 webpack.mix.js                  # 📦 Configuração Webpack Mix
 ```
 
 ---
