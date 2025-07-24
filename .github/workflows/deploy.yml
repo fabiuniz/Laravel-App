@@ -147,7 +147,6 @@ jobs:
             --set-env-vars="APP_DEBUG=false"
             --set-env-vars="LOG_CHANNEL=stderr"
             --set-env-vars="DB_CONNECTION=mysql"
-            --set-env-vars="DB_HOST=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:laravel-db-prod"
             --set-env-vars="DB_PORT=3306"
             --set-env-vars="DB_DATABASE=${{ secrets.DB_DATABASE }}"
             --set-env-vars="DB_USERNAME=${{ secrets.DB_USERNAME }}"
@@ -168,7 +167,6 @@ jobs:
             --set-env-vars="APP_ENV=production" \
             --set-env-vars="APP_DEBUG=false" \
             --set-env-vars="DB_CONNECTION=mysql" \
-            --set-env-vars="DB_HOST=/cloudsql/$PROJECT_ID:$REGION:laravel-db-prod" \
             --set-env-vars="DB_PORT=3306" \
             --set-env-vars="DB_DATABASE=${{ secrets.DB_DATABASE }}" \
             --set-env-vars="DB_USERNAME=${{ secrets.DB_USERNAME }}" \

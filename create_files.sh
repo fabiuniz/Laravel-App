@@ -3,30 +3,44 @@
 echo "🚀 Configurando Projeto Laravel Completo com Docker"
 echo "=================================================="
 
-# Verificar se está no diretório correto
-if [ ! -f "$(basename "$0")" ]; then
-    echo "⚠️  Execute este script no diretório onde deseja criar o projeto"
+# --- INÍCIO DAS MUDANÇAS ---
+
+# Defina o diretório base como o diretório onde o script está
+# Isso assume que create_files.sh está na raiz do seu projeto laravel-docker-app
+BASE_DIR="$(dirname "$0")"
+
+# Altere para o diretório base do projeto
+# Se o script está em laravel-docker-app/create_files.sh, este comando te levará para laravel-docker-app/
+cd "$BASE_DIR"
+
+# Verificar se estamos na raiz de um projeto Laravel existente
+# Esta é uma verificação importante para evitar rodar o script no lugar errado
+if [ ! -f "artisan" ] || [ ! -d "app" ] || [ ! -f "composer.json" ]; then
+    echo "⚠️  Este script deve ser executado na pasta raiz do seu projeto Laravel existente (onde 'artisan', 'app/' e 'composer.json' estão)."
+    echo "Exemplo: Vá para o diretório 'laravel-docker-app' e execute './create_files.sh'."
+    exit 1
 fi
 
 SERVER_NAME="vmlinuxd" # 127.0.0.1
-PROJECT_NAME="laravel-docker-app"
-echo "📁 Criando projeto: $PROJECT_NAME"
+PROJECT_NAME="laravel-docker-app" # Este nome agora será apenas para referência na saída, não mais para criar um novo diretório.
+echo "📁 Regenerando arquivos no diretório: $(pwd)"
 
-# Criar diretório do projeto se não existir
-mkdir -p $PROJECT_NAME
-chmod -R 777 $PROJECT_NAME
-cd $PROJECT_NAME
+# --- FIM DAS MUDANÇAS ---
 
-echo "🔽 Baixando Laravel via Composer..."
-# Criar projeto Laravel usando imagem Docker temporária
-docker run --rm -v "$(pwd):/app" composer:latest create-project --prefer-dist laravel/laravel . "8.*"
+echo "🔽 Baixando Laravel via Composer (se não houver um projeto, será baixado/atualizado)..."
+# Criar projeto Laravel usando imagem Docker temporária ou atualizar se já existir
+# O ponto '.' no final indica que o Laravel deve ser instalado no diretório atual.
+# Removendo "8.*" para permitir que o composer decida a melhor versão ou atualize,
+# ou simplesmente pule a instalação se o projeto já estiver lá.
+docker run --rm -v "$(pwd):/app" composer:latest create-project --prefer-dist laravel/laravel .
 
-# Aguardar download completar
+# Aguardar download completar (pode ser ajustado se o composer já atualizou)
 sleep 5
 
 echo "📁 Criando estrutura Docker..."
-# Criar diretórios Docker
+# Criar diretórios Docker - '-p' evita erro se já existirem
 mkdir -p docker/{nginx,php,mysql,supervisor}
+mkdir -p .github/workflows # Certifica que o diretório .github/workflows existe
 
 echo "🐋 Criando Dockerfile..."
 cat > Dockerfile << 'EOF'
