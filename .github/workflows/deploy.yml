@@ -135,7 +135,8 @@ jobs:
 
       - name: Show Production URL
         run: echo "🚀 Aplicação de Produção disponível em: ${{ steps.deploy.outputs.url }}"
-  staging-deploy:
+
+  staging-deploy: # Linha corrigida: Alinhada com 'test' e 'build-and-deploy'
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop'
