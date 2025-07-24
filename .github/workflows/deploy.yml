@@ -7,8 +7,8 @@ name: 🚀 Deploy Laravel to Google Cloud Run
 on:
   push:
     branches:
-      - main          # 🌐 Produção
-      - develop       # 🧪 Staging
+      - main            # 🌐 Produção
+      - develop         # 🧪 Staging
   pull_request:
     branches:
       - main
@@ -91,6 +91,7 @@ jobs:
             ./vendor/bin/phpcs --standard=PSR12 app/
           fi
 
+  ---
   # 2️⃣ JOB: Build e Deploy para Produção
   deploy-production:
     name: 🚀 Deploy Produção
@@ -175,7 +176,7 @@ jobs:
             --command="php" \
             --args="artisan,migrate,--force" \
             --memory=256Mi \
-            --cpu=0.5 \
+            --cpu=1 \
             --max-retries=3 \
             --parallelism=1 \
             --task-timeout=600
@@ -200,7 +201,7 @@ jobs:
             --command="/bin/bash" \
             --args="-c,php artisan config:cache && php artisan route:cache && php artisan view:cache" \
             --memory=256Mi \
-            --cpu=0.5 \
+            --cpu=1 \
             --max-retries=2 \
             --parallelism=1 \
             --task-timeout=300 \
@@ -256,6 +257,7 @@ jobs:
             fi
           done || echo "ℹ️ Nenhuma imagem antiga para remover"
 
+  ---
   # 3️⃣ JOB: Build e Deploy para Staging
   deploy-staging:
     name: 🧪 Deploy Staging
@@ -342,7 +344,7 @@ jobs:
             --command="php" \
             --args="artisan,migrate,--force" \
             --memory=256Mi \
-            --cpu=0.5 \
+            --cpu=1 \
             --max-retries=3 \
             --parallelism=1 \
             --task-timeout=600 \
@@ -368,7 +370,7 @@ jobs:
             --command="/bin/bash" \
             --args="-c,php artisan config:cache && php artisan route:cache && php artisan view:cache" \
             --memory=256Mi \
-            --cpu=0.5 \
+            --cpu=1 \
             --max-retries=2 \
             --parallelism=1 \
             --task-timeout=300 \
@@ -424,6 +426,7 @@ jobs:
             fi
           done || echo "ℹ️ Nenhuma imagem antiga para remover"
 
+  ---
   # 4️⃣ JOB: Notificação de Deploy
   notify:
     name: 📢 Notificar Resultado
