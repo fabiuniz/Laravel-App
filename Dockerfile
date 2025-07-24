@@ -34,7 +34,7 @@ COPY . .
 # Instalar dependências do Composer
 RUN composer install --optimize-autoloader --no-dev --no-interaction
 
-# Configurar permissões
+# Configurar permissões (estas ainda são úteis para o build da imagem, mas serão sobrescritas pelo volume)
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && chmod -R 775 storage bootstrap/cache
@@ -43,6 +43,12 @@ RUN chown -R www-data:www-data /var/www/html \
 COPY docker/nginx/default.conf /etc/nginx/sites-available/default
 COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Adicionar o entrypoint.sh e torná-lo executável
+# ASSUMindo que entrypoint.sh está em docker/app/
+COPY docker/app/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 EXPOSE 80
 
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Mudar o CMD para usar o nosso entrypoint.sh
+CMD ["/usr/local/bin/docker-entrypoint.sh", "/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
