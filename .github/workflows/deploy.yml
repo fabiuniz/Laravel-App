@@ -163,7 +163,7 @@ jobs:
           gcloud run jobs create $JOB_NAME \
             --image=$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE:$GITHUB_SHA \
             --region=$REGION \
-            --add-cloudsql-instances=$PROJECT_ID:$REGION:laravel-db-prod \
+            --set-cloudsql-instances=$PROJECT_ID:$REGION:laravel-db-prod \
             --set-env-vars="APP_ENV=production" \
             --set-env-vars="APP_DEBUG=false" \
             --set-env-vars="DB_CONNECTION=mysql" \
