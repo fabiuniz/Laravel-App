@@ -7,8 +7,8 @@ name: 🚀 Deploy Laravel to Google Cloud Run
 on:
   push:
     branches:
-      - main        # 🌐 Produção
-      - develop     # 🧪 Staging
+      - main          # 🌐 Produção
+      - develop       # 🧪 Staging
   pull_request:
     branches:
       - main
@@ -27,7 +27,7 @@ jobs:
   tests:
     name: 🧪 Executar Testes
     runs-on: ubuntu-latest
-    
+
     services:
       mysql:
         image: mysql:8.0
@@ -83,7 +83,7 @@ jobs:
         run: php artisan migrate --force
 
       - name: ✅ Executar testes PHPUnit
-        run: php artisan test --coverage
+        run: php artisan test --coverage-php # Changed from --coverage
 
       - name: 📊 Executar verificações de código
         run: |
