@@ -175,7 +175,7 @@ jobs:
             DB_DATABASE=${{ secrets.DB_DATABASE_STAGING }}
             DB_USERNAME=${{ secrets.DB_USERNAME_STAGING }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD_STAGING }}
-          cloud_sql_instances: ${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_STAGING
+          cloud_sql_instances: "${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_STAGING"
           timeout: 900s
 
       - name: Run Laravel Migrations (Staging)
@@ -183,15 +183,15 @@ jobs:
           MIGRATION_JOB_NAME="${{ env.SERVICE }}-staging-migrate-$(date +%s)"
           echo "Criando e executando Cloud Run Job para migrações de staging: ${MIGRATION_JOB_NAME}"
           gcloud run jobs create "${MIGRATION_JOB_NAME}" \
-            --image=${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}-staging:${{ github.sha }} \
+            --image="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}-staging:${{ github.sha }}" \
             --command=/usr/local/bin/php \
             --args=artisan,migrate,--force \
-            --region=${{ env.REGION }} \
-            --project=${{ env.PROJECT_ID }} \
+            --region="${{ env.REGION }}" \
+            --project="${{ env.PROJECT_ID }}" \
             --no-cpu-throttling \
-            --service-account=${{ secrets.GCP_SA_EMAIL }} \
+            --service-account="${{ secrets.GCP_SA_EMAIL }}" \
             --set-env-vars="DB_CONNECTION=mysql,DB_HOST=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_STAGING,DB_PORT=3306,DB_DATABASE=${{ secrets.DB_DATABASE_STAGING }},DB_USERNAME=${{ secrets.DB_USERNAME_STAGING }},DB_PASSWORD=${{ secrets.DB_PASSWORD_STAGING }}" \
-            --cloud-sql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_STAGING \
+            --cloud-sql-instances="${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_STAGING" \
             --wait
           echo "Migrações concluídas para o serviço ${{ env.SERVICE }}-staging"
 
