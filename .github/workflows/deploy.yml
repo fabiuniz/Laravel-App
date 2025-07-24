@@ -187,8 +187,7 @@ jobs:
 
       - name: 🧹 Otimização pós-deploy
         run: |
-          JOB_NAME="laravel-optimize-prod-$(echo $GITHUB_SHA | cut -c1-8)"
-          
+          JOB_NAME="laravel-optimize-prod-$(echo $GITHUB_SHA | cut -c1-8)"          
           # Criar job para otimização do Laravel
           gcloud run jobs create $JOB_NAME \
             --image=$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE:$GITHUB_SHA \
