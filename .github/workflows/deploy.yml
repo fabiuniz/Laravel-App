@@ -95,7 +95,6 @@ jobs:
   deploy:
     name: 🚀 Build e Deploy
     needs: tests
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     
     # 🌐 Matriz de ambientes
@@ -117,8 +116,8 @@ jobs:
             db_username_secret: DB_USERNAME_STAGING
             db_password_secret: DB_PASSWORD_STAGING
 
-    # 🔒 Filtrar por branch
-    if: github.ref == format('refs/heads/{0}', matrix.branch)
+    # 🔒 Filtrar por branch e evento push
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', matrix.branch)
     
     environment: ${{ matrix.environment }}
 
