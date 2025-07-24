@@ -9,6 +9,7 @@
 
 <div align="center">  
  <img src="images/laravel.png" alt="Laravel Logo"/> 
+
   ![PHP](https://img.shields.io/badge/PHP-8.3-777BB4.svg?style=flat&logo=php&logoColor=white) 
   ![Laravel](https://img.shields.io/badge/Laravel-^10.0-FF2D20.svg?style=flat&logo=laravel&logoColor=white) 
   ![Docker](https://img.shields.io/badge/Docker-2496ED.svg?style=flat&logo=Docker&logoColor=white) 
@@ -16,6 +17,7 @@
   ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1.svg?style=flat&logo=mysql&logoColor=white) 
   ![License](https://img.shields.io/badge/license-MIT-green.svg)
 </div>
+
 
 ## 📖 Sobre o Projeto
 
