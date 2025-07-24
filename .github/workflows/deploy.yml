@@ -1,11 +1,20 @@
-name: Deploy to GCP
+# 🚀 Laravel Docker App - CI/CD Pipeline para Google Cloud Run
+# Autor: Fabiano Rocha/Fabiuniz
+# Descrição: Pipeline completo com testes, build Docker e deploy automatizado
+
+name: 🚀 Deploy Laravel to Google Cloud Run
 
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main        # 🌐 Produção
+      - develop     # 🧪 Staging
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - develop
 
+# ⚙️ Variáveis de ambiente globais
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GAR_LOCATION: us-central1
@@ -14,186 +23,320 @@ env:
   REGION: us-central1
 
 jobs:
-  test:
+  # 1️⃣ JOB: Testes Automatizados
+  tests:
+    name: 🧪 Executar Testes
     runs-on: ubuntu-latest
-    name: Run Tests
+    
     services:
       mysql:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: root_password
           MYSQL_DATABASE: laravel_test
+          MYSQL_USER: laravel_user
+          MYSQL_PASSWORD: laravel_password
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
 
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout código
         uses: actions/checkout@v4
 
-      - name: Setup PHP
+      - name: 🐘 Setup PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mbstring, dom, fileinfo, mysql, gd, zip, bcmath
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, mysql, pdo_mysql
+          coverage: xdebug
 
-      - name: Copy .env
-        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+      - name: 📦 Cache Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
 
-      - name: Install Dependencies
-        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+      - name: 🔧 Instalar dependências Composer
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
 
-      - name: Generate key
+      - name: 📋 Copiar arquivo de ambiente de teste
+        run: |
+          cp .env.example .env
+          echo "DB_CONNECTION=mysql" >> .env
+          echo "DB_HOST=127.0.0.1" >> .env
+          echo "DB_PORT=3306" >> .env
+          echo "DB_DATABASE=laravel_test" >> .env
+          echo "DB_USERNAME=laravel_user" >> .env
+          echo "DB_PASSWORD=laravel_password" >> .env
+
+      - name: 🔑 Gerar chave da aplicação
         run: php artisan key:generate
 
-      - name: Directory Permissions
-        run: chmod -R 777 storage bootstrap/cache
+      - name: 🗄️ Executar migrações
+        run: php artisan migrate --force
 
-      - name: Create Database
+      - name: ✅ Executar testes PHPUnit
+        run: php artisan test --coverage
+
+      - name: 📊 Executar verificações de código
         run: |
-          mysql --host=127.0.0.1 --port=3306 -uroot -proot_password -e 'CREATE DATABASE IF NOT EXISTS laravel_test;'
+          if [ -f ./vendor/bin/phpcs ]; then
+            ./vendor/bin/phpcs --standard=PSR12 app/
+          fi
 
-      - name: Execute tests (Unit and Feature tests) via PHPUnit
-        env:
-          DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: laravel_test
-          DB_USERNAME: root
-          DB_PASSWORD: root_password
-        run: vendor/bin/phpunit
-
-  build-and-deploy:
-    needs: test
+  # 2️⃣ JOB: Build e Deploy
+  deploy:
+    name: 🚀 Build e Deploy
+    needs: tests
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-      id-token: write
+    
+    # 🌐 Matriz de ambientes
+    strategy:
+      matrix:
+        include:
+          - branch: main
+            environment: production
+            service_suffix: ""
+            cloud_sql_instance: laravel-db-prod
+            db_database_secret: DB_DATABASE
+            db_username_secret: DB_USERNAME
+            db_password_secret: DB_PASSWORD
+          - branch: develop
+            environment: staging
+            service_suffix: "-staging"
+            cloud_sql_instance: laravel-db-staging
+            db_database_secret: DB_DATABASE_STAGING
+            db_username_secret: DB_USERNAME_STAGING
+            db_password_secret: DB_PASSWORD_STAGING
+
+    # 🔒 Filtrar por branch
+    if: github.ref == format('refs/heads/{0}', matrix.branch)
+    
+    environment: ${{ matrix.environment }}
 
     steps:
-      - name: Checkout
+      - name: 📥 Checkout código
         uses: actions/checkout@v4
 
-      - name: Google Auth
+      - name: 🔐 Configurar autenticação Google Cloud
         id: auth
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev
+      - name: ⚙️ Configurar Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
 
-      - name: Build and Push Container
+      - name: 🐳 Configurar Docker para Artifact Registry
+        run: gcloud auth configure-docker $GAR_LOCATION-docker.pkg.dev
+
+      - name: 🏗️ Build da imagem Docker
         run: |
-          docker build -t ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }} .
-          docker push ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}
+          docker build -t $GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE${{ matrix.service_suffix }}:$GITHUB_SHA \
+            --build-arg APP_ENV=${{ matrix.environment }} \
+            --build-arg APP_DEBUG=false \
+            .
 
-      - name: Deploy to Cloud Run
+      - name: 📤 Push da imagem para Artifact Registry
+        run: |
+          docker push $GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE${{ matrix.service_suffix }}:$GITHUB_SHA
+
+      - name: 🚀 Deploy no Cloud Run
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
         with:
-          service: ${{ env.SERVICE }}
+          service: ${{ env.SERVICE }}${{ matrix.service_suffix }}
           region: ${{ env.REGION }}
-          image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}
-          env_vars: |
-            APP_ENV=production
-            APP_DEBUG=false
-            APP_KEY=${{ secrets.LARAVEL_APP_KEY }}
-            APP_URL=${{ steps.deploy.outputs.url }}
-            DB_CONNECTION=mysql
-            DB_HOST=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_PROD
-            DB_PORT=3306
-            DB_DATABASE=${{ secrets.DB_DATABASE }}
-            DB_USERNAME=${{ secrets.DB_USERNAME }}
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          cloud_sql_instances: ${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_PROD
-          timeout: 900s
+          image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}${{ matrix.service_suffix }}:${{ github.sha }}
+          flags: |
+            --allow-unauthenticated
+            --port=8000
+            --memory=512Mi
+            --cpu=1
+            --min-instances=0
+            --max-instances=10
+            --concurrency=80
+            --timeout=300
+            --add-cloudsql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:${{ matrix.cloud_sql_instance }}
+            --set-env-vars="APP_ENV=${{ matrix.environment }}"
+            --set-env-vars="APP_DEBUG=false"
+            --set-env-vars="LOG_CHANNEL=stderr"
+            --set-env-vars="DB_CONNECTION=mysql"
+            --set-env-vars="DB_HOST=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:${{ matrix.cloud_sql_instance }}"
+            --set-env-vars="DB_PORT=3306"
+            --set-env-vars="DB_DATABASE=${{ secrets[matrix.db_database_secret] }}"
+            --set-env-vars="DB_USERNAME=${{ secrets[matrix.db_username_secret] }}"
+            --set-env-vars="DB_PASSWORD=${{ secrets[matrix.db_password_secret] }}"
+            --set-env-vars="APP_KEY=${{ secrets.LARAVEL_APP_KEY }}"
+            --set-env-vars="CACHE_DRIVER=file"
+            --set-env-vars="SESSION_DRIVER=file"
+            --set-env-vars="QUEUE_CONNECTION=sync"
 
-      - name: Run Laravel Migrations
+      - name: 🗄️ Executar migrações via Cloud Run Job
         run: |
-          MIGRATION_JOB_NAME="${{ env.SERVICE }}-migrate-${{ github.sha }}"
-          echo "Criando e executando Cloud Run Job para migrações: ${MIGRATION_JOB_NAME}"
-          gcloud run jobs create "${MIGRATION_JOB_NAME}" \
-            --image=${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }} \
-            --command=/usr/local/bin/php \
-            --args=artisan,migrate,--force \
-            --region=${{ env.REGION }} \
-            --project=${{ env.PROJECT_ID }} \
-            --no-cpu-throttling \
-            --service-account=${{ secrets.GCP_SA_EMAIL }} \
-            --set-env-vars="DB_CONNECTION=mysql,DB_HOST=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_PROD,DB_PORT=3306,DB_DATABASE=${{ secrets.DB_DATABASE }},DB_USERNAME=${{ secrets.DB_USERNAME }},DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
-            --cloud-sql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_PROD \
-            --wait
-          echo "Migrações concluídas para o serviço ${{ env.SERVICE }}"
-          # gcloud run jobs delete "${MIGRATION_JOB_NAME}" --region=${{ env.REGION }} --project=${{ env.PROJECT_ID }} --quiet
+          gcloud run jobs create laravel-migrate-${{ matrix.environment }}-$GITHUB_SHA \
+            --image=$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE${{ matrix.service_suffix }}:$GITHUB_SHA \
+            --region=$REGION \
+            --add-cloudsql-instances=$PROJECT_ID:$REGION:${{ matrix.cloud_sql_instance }} \
+            --set-env-vars="APP_ENV=${{ matrix.environment }}" \
+            --set-env-vars="APP_DEBUG=false" \
+            --set-env-vars="DB_CONNECTION=mysql" \
+            --set-env-vars="DB_HOST=/cloudsql/$PROJECT_ID:$REGION:${{ matrix.cloud_sql_instance }}" \
+            --set-env-vars="DB_PORT=3306" \
+            --set-env-vars="DB_DATABASE=${{ secrets[matrix.db_database_secret] }}" \
+            --set-env-vars="DB_USERNAME=${{ secrets[matrix.db_username_secret] }}" \
+            --set-env-vars="DB_PASSWORD=${{ secrets[matrix.db_password_secret] }}" \
+            --set-env-vars="APP_KEY=${{ secrets.LARAVEL_APP_KEY }}" \
+            --command="php" \
+            --args="artisan,migrate,--force" \
+            --memory=256Mi \
+            --cpu=0.5 \
+            --max-retries=3 \
+            --parallelism=1 \
+            --task-timeout=600 \
+            --replace
 
-      - name: Show Production URL
-        run: echo "🚀 Aplicação de Produção disponível em: ${{ steps.deploy.outputs.url }}"
+          # Executar o job de migração
+          gcloud run jobs execute laravel-migrate-${{ matrix.environment }}-$GITHUB_SHA --region=$REGION --wait
 
-  staging-deploy:
-    needs: test
+          # Limpar job após execução
+          gcloud run jobs delete laravel-migrate-${{ matrix.environment }}-$GITHUB_SHA --region=$REGION --quiet
+
+      - name: 🧹 Otimização pós-deploy
+        run: |
+          # Criar job para otimização do Laravel
+          gcloud run jobs create laravel-optimize-${{ matrix.environment }}-$GITHUB_SHA \
+            --image=$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE${{ matrix.service_suffix }}:$GITHUB_SHA \
+            --region=$REGION \
+            --set-env-vars="APP_ENV=${{ matrix.environment }}" \
+            --set-env-vars="APP_DEBUG=false" \
+            --set-env-vars="APP_KEY=${{ secrets.LARAVEL_APP_KEY }}" \
+            --command="/bin/bash" \
+            --args="-c,php artisan config:cache && php artisan route:cache && php artisan view:cache" \
+            --memory=256Mi \
+            --cpu=0.5 \
+            --max-retries=2 \
+            --parallelism=1 \
+            --task-timeout=300 \
+            --replace
+
+          # Executar otimização
+          gcloud run jobs execute laravel-optimize-${{ matrix.environment }}-$GITHUB_SHA --region=$REGION --wait
+
+          # Limpar job
+          gcloud run jobs delete laravel-optimize-${{ matrix.environment }}-$GITHUB_SHA --region=$REGION --quiet
+
+      - name: 🔍 Verificação de saúde
+        run: |
+          # Aguardar o serviço ficar disponível
+          sleep 30
+          
+          # Obter URL do serviço
+          SERVICE_URL=$(gcloud run services describe $SERVICE${{ matrix.service_suffix }} --region=$REGION --format='value(status.url)')
+          
+          # Verificar saúde da aplicação
+          echo "🔍 Verificando saúde em: $SERVICE_URL"
+          
+          # Tentar conectar com retry
+          for i in {1..5}; do
+            if curl -f -s "$SERVICE_URL/api/hello" > /dev/null; then
+              echo "✅ Aplicação está respondendo!"
+              break
+            else
+              echo "⏳ Tentativa $i/5 falhou, aguardando 15s..."
+              sleep 15
+            fi
+          done
+          
+          # Verificar se o endpoint principal está funcionando
+          curl -f -s "$SERVICE_URL" > /dev/null || (echo "❌ Aplicação não está respondendo corretamente" && exit 1)
+          
+          echo "🎉 Deploy realizado com sucesso!"
+          echo "🌐 URL da aplicação: $SERVICE_URL"
+
+      - name: 🧹 Limpeza de imagens antigas
+        if: success()
+        run: |
+          # Manter apenas as 5 imagens mais recentes
+          gcloud artifacts docker images list $GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE${{ matrix.service_suffix }} \
+            --sort-by="~CREATE_TIME" \
+            --limit=999 \
+            --format="get(version)" | tail -n +6 | while read version; do
+            if [ ! -z "$version" ]; then
+              echo "🗑️ Removendo imagem antiga: $version"
+              gcloud artifacts docker images delete \
+                $GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE${{ matrix.service_suffix }}:$version \
+                --quiet
+            fi
+          done || echo "ℹ️ Nenhuma imagem antiga para remover"
+
+  # 3️⃣ JOB: Notificação de Deploy
+  notify:
+    name: 📢 Notificar Resultado
+    needs: [tests, deploy]
+    if: always()
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
-    permissions:
-      contents: read
-      id-token: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Google Auth
-        id: auth
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev
-
-      - name: Build and Push Container (Staging)
+      - name: 📊 Preparar status do deploy
+        id: status
         run: |
-          docker build -t ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}-staging:${{ github.sha }} .
-          docker push ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}-staging:${{ github.sha }}
+          if [ "${{ needs.tests.result }}" == "success" ] && [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "message=✅ Deploy realizado com sucesso!" >> $GITHUB_OUTPUT
+            echo "color=28a745" >> $GITHUB_OUTPUT
+          elif [ "${{ needs.tests.result }}" == "failure" ]; then
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "message=❌ Falha nos testes automatizados" >> $GITHUB_OUTPUT
+            echo "color=dc3545" >> $GITHUB_OUTPUT
+          elif [ "${{ needs.deploy.result }}" == "failure" ]; then
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "message=❌ Falha no deploy" >> $GITHUB_OUTPUT
+            echo "color=dc3545" >> $GITHUB_OUTPUT
+          else
+            echo "status=cancelled" >> $GITHUB_OUTPUT
+            echo "message=⚠️ Deploy cancelado" >> $GITHUB_OUTPUT
+            echo "color=ffc107" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Deploy to Cloud Run (Staging)
-        id: deploy_staging
-        uses: google-github-actions/deploy-cloudrun@v2
-        with:
-          service: ${{ env.SERVICE }}-staging
-          region: ${{ env.REGION }}
-          image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}-staging:${{ github.sha }}
-          env_vars: |
-            APP_ENV=staging
-            APP_DEBUG=true
-            APP_KEY=${{ secrets.LARAVEL_APP_KEY }}
-            APP_URL=${{ steps.deploy_staging.outputs.url }}
-            DB_CONNECTION=mysql
-            DB_HOST=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_STAGING
-            DB_PORT=3306
-            DB_DATABASE=${{ secrets.DB_DATABASE_STAGING }}
-            DB_USERNAME=${{ secrets.DB_USERNAME_STAGING }}
-            DB_PASSWORD=${{ secrets.DB_PASSWORD_STAGING }}
-          cloud_sql_instances: "${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_STAGING"
-          timeout: 900s
-
-      - name: Run Laravel Migrations (Staging)
+      - name: 📝 Resumo do deploy
         run: |
-          MIGRATION_JOB_NAME="${{ env.SERVICE }}-staging-migrate-$(date +%s)"
-          echo "Criando e executando Cloud Run Job para migrações de staging: ${MIGRATION_JOB_NAME}"
-          gcloud run jobs create "${MIGRATION_JOB_NAME}" \
-            --image="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}-staging:${{ github.sha }}" \
-            --command=/usr/local/bin/php \
-            --args=artisan,migrate,--force \
-            --region="${{ env.REGION }}" \
-            --project="${{ env.PROJECT_ID }}" \
-            --no-cpu-throttling \
-            --service-account="${{ secrets.GCP_SA_EMAIL }}" \
-            --set-env-vars="DB_CONNECTION=mysql,DB_HOST=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_STAGING,DB_PORT=3306,DB_DATABASE=${{ secrets.DB_DATABASE_STAGING }},DB_USERNAME=${{ secrets.DB_USERNAME_STAGING }},DB_PASSWORD=${{ secrets.DB_PASSWORD_STAGING }}" \
-            --cloud-sql-instances="${{ env.PROJECT_ID }}:${{ env.REGION }}:YOUR_CLOUD_SQL_INSTANCE_NAME_STAGING" \
-            --wait
-          echo "Migrações concluídas para o serviço ${{ env.SERVICE }}-staging"
+          echo "## 🚀 Resultado do Deploy" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ steps.status.outputs.message }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.status.outputs.status }}" == "success" ]; then
+            if [ "${{ github.ref_name }}" == "main" ]; then
+              echo "🌐 **Produção:** https://${{ env.SERVICE }}-xxxxx-uc.a.run.app" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "🧪 **Staging:** https://${{ env.SERVICE }}-staging-xxxxx-uc.a.run.app" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Jobs Executados" >> $GITHUB_STEP_SUMMARY
+          echo "- **Testes:** ${{ needs.tests.result == 'success' && '✅' || '❌' }} ${{ needs.tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deploy:** ${{ needs.deploy.result == 'success' && '✅' || needs.deploy.result == 'failure' && '❌' || '⏭️' }} ${{ needs.deploy.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
 
-      - name: Show Staging URL
-        run: echo "🧪 Aplicação de Staging disponível em: ${{ steps.deploy_staging.outputs.url }}"
+# 📋 Configurações de segurança
+permissions:
+  contents: read
+  id-token: write
+  actions: read
+  checks: write
+
+# 🔄 Configurações de concorrência
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
