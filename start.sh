@@ -14,7 +14,10 @@ echo "▶️ Iniciando containers..."
 docker-compose up -d
 
 echo "⏳ Aguardando containers ficarem prontos..."
-sleep 30
+until [ "`docker-compose inspect --format='{{.State.Health.Status}}' db 2>/dev/null`" = "healthy" ]; do
+  echo "Aguardando o 'db' ficar saudável..."
+  sleep 5
+done
 
 # Verificar se containers estão rodando
 if ! docker-compose ps | grep -q "Up"; then

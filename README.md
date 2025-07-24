@@ -446,6 +446,15 @@ git push origin develop
 ./dev.sh migrate
 ./dev.sh test
 ./dev.sh fresh         # Reset database
+ dos2unix # coverter formato de dos para unix
+ nano .env # Editar configuraçõe do banco Mysql
+    #APP_URL=http://localhost #vmlinuxd
+    #DB_CONNECTION=mysql
+    #DB_HOST=127.0.0.1 #vmlinuxd
+    #DB_PORT=3306
+    #DB_DATABASE=laravel_db
+    #DB_USERNAME=root
+    #DB_PASSWORD=root_password
 ```
 
 ### Acessos locais:
