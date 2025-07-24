@@ -91,6 +91,7 @@ jobs:
             ./vendor/bin/phpcs --standard=PSR12 app/
           fi
 
+  ---
   # 2️⃣ JOB: Build e Deploy para Produção
   deploy-production:
     name: 🚀 Deploy Produção
@@ -169,12 +170,12 @@ jobs:
             --set-env-vars="DB_CONNECTION=mysql" \
             --set-env-vars="DB_PORT=3306" \
             --set-env-vars="DB_DATABASE=${{ secrets.DB_DATABASE }}" \
-            --set-env-vars="DB_USERNAME=${{ secrets.DB_USERNAME }}" \
+            --set-env-vars="DB_USERNAME=${{ secrets.DB_USERNAME }}"
             --set-env-vars="DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
             --set-env-vars="APP_KEY=${{ secrets.LARAVEL_APP_KEY }}" \
             --command="php" \
             --args="artisan,migrate,--force" \
-            --memory=256Mi \
+            --memory=512Mi \ # <--- Alterado de 256Mi para 512Mi
             --cpu=1 \
             --max-retries=3 \
             --parallelism=1 \
@@ -199,7 +200,7 @@ jobs:
             --set-env-vars="APP_KEY=${{ secrets.LARAVEL_APP_KEY }}" \
             --command="/bin/bash" \
             --args="-c,php artisan config:cache && php artisan route:cache && php artisan view:cache" \
-            --memory=256Mi \
+            --memory=512Mi \ # <--- Alterado de 256Mi para 512Mi
             --cpu=1 \
             --max-retries=2 \
             --parallelism=1 \
@@ -256,6 +257,7 @@ jobs:
             fi
           done || echo "ℹ️ Nenhuma imagem antiga para remover"
 
+  ---
   # 3️⃣ JOB: Build e Deploy para Staging
   deploy-staging:
     name: 🧪 Deploy Staging
@@ -341,7 +343,7 @@ jobs:
             --set-env-vars="APP_KEY=${{ secrets.LARAVEL_APP_KEY }}" \
             --command="php" \
             --args="artisan,migrate,--force" \
-            --memory=256Mi \
+            --memory=512Mi \ # <--- Alterado de 256Mi para 512Mi
             --cpu=1 \
             --max-retries=3 \
             --parallelism=1 \
@@ -367,7 +369,7 @@ jobs:
             --set-env-vars="APP_KEY=${{ secrets.LARAVEL_APP_KEY }}" \
             --command="/bin/bash" \
             --args="-c,php artisan config:cache && php artisan route:cache && php artisan view:cache" \
-            --memory=256Mi \
+            --memory=512Mi \ # <--- Alterado de 256Mi para 512Mi
             --cpu=1 \
             --max-retries=2 \
             --parallelism=1 \
@@ -424,6 +426,7 @@ jobs:
             fi
           done || echo "ℹ️ Nenhuma imagem antiga para remover"
 
+  ---
   # 4️⃣ JOB: Notificação de Deploy
   notify:
     name: 📢 Notificar Resultado
