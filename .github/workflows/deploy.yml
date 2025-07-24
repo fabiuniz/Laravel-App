@@ -2,9 +2,9 @@ name: Deploy to GCP
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -17,8 +17,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
     name: Run Tests
-    # A linha em branco abaixo de 'name: Run Tests' foi removida para consistência,
-    # embora não causasse um erro de sintaxe.
     services:
       mysql:
         image: mysql:8.0
@@ -142,7 +140,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop'
-    permissions: # INDENTAÇÃO CORRIGIDA AQUI!
+    permissions:
       contents: read
       id-token: write
 
