@@ -180,7 +180,7 @@ jobs:
             --cpu=0.5 \
             --max-retries=3 \
             --parallelism=1 \
-            --task-timeout=600 \
+            --task-timeout=600
 
           # Executar o job de migração
           gcloud run jobs execute $JOB_NAME --region=$REGION --wait

@@ -10,7 +10,7 @@
 <div align="center">  
  <img src="images/laravel.png" alt="Laravel Logo"/> 
   ![PHP](https://img.shields.io/badge/PHP-8.3-777BB4.svg?style=flat&logo=php&logoColor=white)
-  ![Laravel](https://img.shields.io/badge/Laravel-8.x-FF2D20.svg?style=flat&logo=laravel&logoColor=white)
+  ![Laravel](https://img.shields.io/badge/Laravel-^10.0-FF2D20.svg?style=flat&logo=laravel&logoColor=white)
   ![Docker](https://img.shields.io/badge/Docker-2496ED.svg?style=flat&logo=Docker&logoColor=white)
   ![Google Cloud](https://img.shields.io/badge/Google%20Cloud-4285F4.svg?style=flat&logo=GoogleCloud&logoColor=white)
   ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1.svg?style=flat&logo=mysql&logoColor=white)
@@ -236,7 +236,8 @@ gcloud services enable run.googleapis.com \
   artifactregistry.googleapis.com \
   iam.googleapis.com \
   cloudbuild.googleapis.com \
-  sqladmin.googleapis.com
+  sqladmin.googleapis.com \
+  serviceusage.googleapis.com
 
 # 🔧 Verificar Repositório Artifact Registry existe
 gcloud artifacts repositories list --format="table(name,location)"
@@ -263,19 +264,11 @@ gcloud projects get-iam-policy $(gcloud config get-value project) \
 # ✅ Conceder permissões
 gcloud projects add-iam-policy-binding $PROJECT_ID \
   --member="serviceAccount:$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/run.admin"
-
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member="serviceAccount:$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/artifactregistry.writer"
-
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member="serviceAccount:$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/iam.serviceAccountUser"
-
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member="serviceAccount:$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/cloudsql.client"
+  --role="roles/run.admin" \
+  --role="roles/artifactregistry.writer" \
+  --role="roles/iam.serviceAccountUser" \
+  --role="roles/cloudsql.client" \
+  --role="roles/serviceusage.serviceUsageViewer"
 
 # ✅ Gerar chave da Service Account
 gcloud iam service-accounts keys create sa-key.json \
