@@ -69,7 +69,6 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
     permissions:
       contents: read
       id-token: write # Necessário para autenticação no GCP
