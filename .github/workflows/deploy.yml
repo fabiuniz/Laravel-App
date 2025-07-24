@@ -159,7 +159,6 @@ jobs:
       - name: 🗄️ Executar migrações via Cloud Run Job
         run: |
           JOB_NAME="laravel-migrate-prod-$(echo $GITHUB_SHA | cut -c1-8)"
-          
           gcloud run jobs create $JOB_NAME \
             --image=$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE:$GITHUB_SHA \
             --region=$REGION \
