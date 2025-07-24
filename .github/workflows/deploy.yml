@@ -83,7 +83,7 @@ jobs:
         run: php artisan migrate --force
 
       - name: ✅ Executar testes PHPUnit
-        run: php artisan test --coverage-php # Changed from --coverage
+        run: php artisan test --coverage-php build/coverage.php
 
       - name: 📊 Executar verificações de código
         run: |
