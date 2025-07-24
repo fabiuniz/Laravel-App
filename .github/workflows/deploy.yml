@@ -91,7 +91,6 @@ jobs:
             ./vendor/bin/phpcs --standard=PSR12 app/
           fi
 
-  ---
   # 2️⃣ JOB: Build e Deploy para Produção
   deploy-production:
     name: 🚀 Deploy Produção
@@ -257,7 +256,6 @@ jobs:
             fi
           done || echo "ℹ️ Nenhuma imagem antiga para remover"
 
-  ---
   # 3️⃣ JOB: Build e Deploy para Staging
   deploy-staging:
     name: 🧪 Deploy Staging
@@ -426,7 +424,6 @@ jobs:
             fi
           done || echo "ℹ️ Nenhuma imagem antiga para remover"
 
-  ---
   # 4️⃣ JOB: Notificação de Deploy
   notify:
     name: 📢 Notificar Resultado
